@@ -163,8 +163,26 @@ function App() {
 		}
 	}, [result]);
 
+	// Calculate correct answer for debugging
+	const price1 = card1?.cardmarket?.prices?.averageSellPrice || 0;
+	const price2 = card2?.cardmarket?.prices?.averageSellPrice || 0;
+	const correctAnswer = price1 && price2 ? (price2 > price1 ? "More" : "Less") : null;
+
 	return (
 		<>
+			{/* Debug Container */}
+			{card1 && card2 && (
+				<div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-yellow-500 z-50 text-sm font-mono">
+					<div className="font-bold text-yellow-400 mb-2">DEBUG INFO</div>
+					<div>Card 1: ${price1.toFixed(2)}</div>
+					<div>Card 2: ${price2.toFixed(2)}</div>
+					<div className="mt-2 pt-2 border-t border-yellow-500">
+						<div className="font-bold">
+							Correct Answer: <span className="text-green-400">{correctAnswer}</span>
+						</div>
+					</div>
+				</div>
+			)}
 			<div className="flex flex-row w-screen h-screen fixed inset-0">
 				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
 					{card1 && (
