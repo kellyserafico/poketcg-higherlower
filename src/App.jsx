@@ -9,34 +9,21 @@ function App() {
 	const [result, setResult] = useState(null);
 	const [animatedPrice, setAnimatedPrice] = useState(0);
 	const isFetchingRef = useRef(false);
-	const prefetchedCardRef = useRef(null);
 
 	const getRandomCard = async () => {
-		const randomPage = Math.floor(Math.random() * 100) + 1;
-		const res = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1&q=supertype:pokemon`);
+		const offset = Math.floor(Math.random() * 25000); // total card count ~25k
+		const res = await fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset / 250)}&q=supertype:pokemon`);
 		const data = await res.json();
 		return data.data[0];
 	};
 
-	const prefetchNextCard = async () => {
-		// Fetch next card in background without blocking
-		const randomPage = Math.floor(Math.random() * 100) + 1;
-		try {
-			const res = await fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage}&pageSize=1&q=supertype:pokemon`);
-			const data = await res.json();
-			prefetchedCardRef.current = data.data[0];
-		} catch (error) {
-			console.error("Prefetch failed:", error);
-		}
-	};
-
 	const getRandomCards = async () => {
-		const randomPage1 = Math.floor(Math.random() * 100) + 1;
-		const randomPage2 = Math.floor(Math.random() * 100) + 1;
-
+		const offset1 = Math.floor(Math.random() * 25000); // total card count ~25k
+		const offset2 = Math.floor(Math.random() * 25000); // total card count ~25k
+    
 		const [res1, res2] = await Promise.all([
-			fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage1}&pageSize=1&q=supertype:pokemon`),
-			fetch(`https://api.pokemontcg.io/v2/cards?page=${randomPage2}&pageSize=1&q=supertype:pokemon`),
+			fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset1 / 250)}&q=supertype:pokemon`),
+			fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset2 / 250)}&q=supertype:pokemon`),
 		]);
 
 		const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
@@ -47,8 +34,6 @@ function App() {
 		setCard2(data2.data[0]);
 		setResult(null);
 
-		// Prefetch next card in background
-		prefetchNextCard();
 	};
 
 	const handleGuess = (guess) => {
@@ -75,31 +60,12 @@ function App() {
 
 			// Wait for animation to play (at least 1 second)
 			const transitionAfterAnimation = () => {
-				// Use prefetched card if available, otherwise fetch new one in background
-				if (prefetchedCardRef.current) {
-					// Prefetched card ready - instant transition!
-					const newCard2 = prefetchedCardRef.current;
-					prefetchedCardRef.current = null;
-
-					// Transition
+				getRandomCard().then((newCard2) => {
 					setCard1(currentCard2);
 					setCard2(newCard2);
 					setResult(null);
 					isFetchingRef.current = false;
-
-					// Prefetch next card in background (non-blocking)
-					prefetchNextCard();
-				} else {
-					// No prefetched card - fetch in background and transition when ready
-					getRandomCard().then((newCard2) => {
-						setCard1(currentCard2);
-						setCard2(newCard2);
-						setResult(null);
-						isFetchingRef.current = false;
-						// Prefetch next card in background
-						prefetchNextCard();
-					});
-				}
+				});
 			};
 
 			// Wait for animation to complete (1 second) before transitioning
@@ -110,13 +76,6 @@ function App() {
 	useEffect(() => {
 		getRandomCards();
 	}, []);
-
-	// Start prefetching as soon as card2 is available
-	useEffect(() => {
-		if (card2 && !prefetchedCardRef.current) {
-			prefetchNextCard();
-		}
-	}, [card2]);
 
 	// Animate price from 0 to target price when result is shown
 	useEffect(() => {
