@@ -10,31 +10,33 @@ function App() {
 	const [animatedPrice, setAnimatedPrice] = useState(0);
 	const isFetchingRef = useRef(false);
 
+	const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 	const getRandomCard = async () => {
-		const offset = Math.floor(Math.random() * 25000); // total card count ~25k
-		const res = await fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset / 250)}&q=supertype:pokemon`);
+		const res = await fetch(`${API_BASE_URL}/api/random-card`);
+		if (!res.ok) {
+			throw new Error(`Failed to fetch card: ${res.statusText}`);
+		}
 		const data = await res.json();
-		return data.data[0];
+		return data;
 	};
 
 	const getRandomCards = async () => {
-		const offset1 = Math.floor(Math.random() * 25000); // total card count ~25k
-		const offset2 = Math.floor(Math.random() * 25000); // total card count ~25k
-    
-		const [res1, res2] = await Promise.all([
-			fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset1 / 250)}&q=supertype:pokemon`),
-			fetch(`https://api.pokemontcg.io/v2/cards?pageSize=1&page=${Math.floor(offset2 / 250)}&q=supertype:pokemon`),
-		]);
-
-		const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
-
-		console.log(data1.data[0]);
-		console.log(data2.data[0]);
-		setCard1(data1.data[0]);
-		setCard2(data2.data[0]);
+		const res = await fetch(`${API_BASE_URL}/api/random-cards?count=2`);
+		if (!res.ok) {
+			throw new Error(`Failed to fetch cards: ${res.statusText}`);
+		}
+		const cards = await res.json();
+		setCard1(cards[0]);
+		setCard2(cards[1]);
 		setResult(null);
-
 	};
+
+	useEffect(() => {
+		if (card1 && card2) {
+			console.log("Displayed cards:", card1.name, "vs", card2.name);
+		}
+	}, [card1, card2]);
 
 	const handleGuess = (guess) => {
 		if (!card1 || !card2 || isFetchingRef.current) return;

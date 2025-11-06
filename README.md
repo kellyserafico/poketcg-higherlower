@@ -1,16 +1,40 @@
-# React + Vite
+# Pokemon TCG Higher or Lower Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + Vite game where you guess which Pokemon card is worth more or less.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## React Compiler
+2. **Set up your Pokemon TCG API key:**
+   - Get your free API key from [pokemontcg.io](https://pokemontcg.io/)
+   - Create a `.env` file in the root directory:
+     ```
+     POKEMON_TCG_API_KEY=your_api_key_here
+     PORT=3001
+     VITE_API_URL=http://localhost:3001
+     ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. **Run the application:**
+   - Start the backend server (in one terminal):
+     ```bash
+     npm run server
+     ```
+   - Start the frontend dev server (in another terminal):
+     ```bash
+     npm run dev
+     ```
 
-## Expanding the ESLint configuration
+## How it works
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The app uses the official [pokemontcgsdk](https://www.npmjs.com/package/pokemontcgsdk) npm package, which runs on the server to bypass CORS restrictions. The Express backend server handles all Pokemon TCG API calls, and the React frontend communicates with the backend.
+
+## Tech Stack
+
+- **Frontend:** React + Vite
+- **Backend:** Express.js
+- **SDK:** pokemontcgsdk (official Pokemon TCG SDK)
+- **Styling:** Tailwind CSS
