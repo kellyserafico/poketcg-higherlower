@@ -8,7 +8,10 @@ function App() {
 	const [card2, setCard2] = useState(null);
 	const [result, setResult] = useState(null);
 	const [animatedPrice, setAnimatedPrice] = useState(0);
+	const [vsFillProgress, setVsFillProgress] = useState(0);
 	const isFetchingRef = useRef(false);
+	const vsAnimationFrameRef = useRef(null);
+	const vsTimeoutRef = useRef(null);
 
 	// Card cache pool - stores cards in memory for fast access
 	const cardPoolRef = useRef([]);
@@ -139,7 +142,7 @@ function App() {
 			// Capture card2 value at the moment of the guess
 			const currentCard2 = card2;
 
-			// Wait for animation to play (at least 1 second)
+			// Wait for animations to complete (1s price + 0.8s VS fill = 1.8s total)
 			const transitionAfterAnimation = () => {
 				// Get new card from pool (synchronous now!)
 				let newCard2 = getRandomCard();
@@ -171,8 +174,8 @@ function App() {
 				}
 			};
 
-			// Wait for animation to complete (1 second) before transitioning
-			setTimeout(transitionAfterAnimation, 1000);
+			// Wait for both animations to complete (1s price + 0.8s VS fill = 1.8s total)
+			setTimeout(transitionAfterAnimation, 1800);
 		}
 	};
 
@@ -230,6 +233,70 @@ function App() {
 		}
 	}, [result]);
 
+	// Animate VS circle fill from bottom to top after price animation completes
+	useEffect(() => {
+		console.log("VS Fill Effect triggered, result:", result);
+
+		// Cleanup any existing animations
+		if (vsTimeoutRef.current) {
+			clearTimeout(vsTimeoutRef.current);
+			vsTimeoutRef.current = null;
+		}
+		if (vsAnimationFrameRef.current) {
+			cancelAnimationFrame(vsAnimationFrameRef.current);
+			vsAnimationFrameRef.current = null;
+		}
+
+		if (result && result.isCorrect) {
+			console.log("Result is correct, starting VS fill animation");
+			// Reset progress first
+			setVsFillProgress(0);
+
+			// Wait for price animation to complete (1 second) before starting VS fill
+			vsTimeoutRef.current = setTimeout(() => {
+				console.log("VS fill timeout fired, starting animation");
+				const duration = 800; // 0.8 second fill animation
+				const startTime = Date.now();
+
+				const animate = () => {
+					const now = Date.now();
+					const elapsed = now - startTime;
+					const progress = Math.min(elapsed / duration, 1);
+
+					// Easing function for smooth animation
+					const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+					const currentProgress = easeOutCubic;
+
+					setVsFillProgress(currentProgress);
+					console.log("VS fill progress:", currentProgress);
+
+					if (progress < 1) {
+						vsAnimationFrameRef.current = requestAnimationFrame(animate);
+					} else {
+						setVsFillProgress(1);
+						vsAnimationFrameRef.current = null;
+						console.log("VS fill animation complete");
+					}
+				};
+
+				vsAnimationFrameRef.current = requestAnimationFrame(animate);
+			}, 1000); // Start after price animation completes
+		} else {
+			setVsFillProgress(0);
+		}
+
+		return () => {
+			if (vsTimeoutRef.current) {
+				clearTimeout(vsTimeoutRef.current);
+				vsTimeoutRef.current = null;
+			}
+			if (vsAnimationFrameRef.current) {
+				cancelAnimationFrame(vsAnimationFrameRef.current);
+				vsAnimationFrameRef.current = null;
+			}
+		};
+	}, [result]);
+
 	// Calculate correct answer for debugging
 	const price1 = card1?.cardmarket?.prices?.averageSellPrice || 0;
 	const price2 = card2?.cardmarket?.prices?.averageSellPrice || 0;
@@ -247,10 +314,33 @@ function App() {
 						<div className="font-bold">
 							Correct Answer: <span className="text-green-400">{correctAnswer}</span>
 						</div>
+						{result && (
+							<div className="mt-2">
+								VS Fill Progress: <span className="text-blue-400">{(vsFillProgress * 100).toFixed(1)}%</span>
+							</div>
+						)}
 					</div>
 				</div>
 			)}
-			<div className="flex flex-row w-screen h-screen fixed inset-0">
+			<div className="relative flex flex-row w-screen h-screen fixed inset-0">
+				{/* VS Badge */}
+				{card1 && card2 && (
+					<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 rounded-full w-20 h-20 flex items-center justify-center shadow-lg overflow-hidden">
+						{/* Background circle */}
+						<div className="absolute inset-0 bg-white rounded-full z-0"></div>
+						{/* Green fill animation - fills from bottom to top */}
+						{result && result.isCorrect && (
+							<div
+								className="absolute inset-0 bg-green-500 z-[1] rounded-full"
+								style={{
+									clipPath: `inset(${100 - vsFillProgress * 100}% 0 0 0)`,
+								}}
+							></div>
+						)}
+						{/* VS text */}
+						<span className="relative z-[2] text-black font-bold text-2xl">VS</span>
+					</div>
+				)}
 				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
 					{card1 && (
 						<img
