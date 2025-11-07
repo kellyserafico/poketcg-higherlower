@@ -5,15 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "pokemontcgsdk": "^2.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

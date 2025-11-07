@@ -10,33 +10,112 @@ function App() {
 	const [animatedPrice, setAnimatedPrice] = useState(0);
 	const isFetchingRef = useRef(false);
 
-	const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+	// Card cache pool - stores cards in memory for fast access
+	const cardPoolRef = useRef([]);
+	const isLoadingPoolRef = useRef(false);
+	const POOL_SIZE = 200; // Target pool size
+	const BATCH_SIZE = 100; // Cards to fetch per API call
+	const MIN_POOL_SIZE = 50; // Refill when pool drops below this
 
-	const getRandomCard = async () => {
-		const res = await fetch(`${API_BASE_URL}/api/random-card`);
-		if (!res.ok) {
-			throw new Error(`Failed to fetch card: ${res.statusText}`);
+	// Fetch a batch of cards from the API
+	const fetchCardBatch = async (page = null) => {
+		try {
+			// If no page specified, use a random page
+			const targetPage = page !== null ? page : Math.floor(Math.random() * 100); // ~25k cards / 250 per page = ~100 pages
+
+			const res = await fetch(`https://api.pokemontcg.io/v2/cards?pageSize=${BATCH_SIZE}&page=${targetPage}&q=supertype:pokemon`);
+
+			if (!res.ok) {
+				throw new Error(`API error: ${res.status}`);
+			}
+
+			const data = await res.json();
+			return data.data || [];
+		} catch (error) {
+			console.error("Error fetching card batch:", error);
+			return [];
 		}
-		const data = await res.json();
-		return data;
 	};
 
+	// Preload cards into the pool
+	const preloadCards = async () => {
+		if (isLoadingPoolRef.current) return;
+
+		isLoadingPoolRef.current = true;
+
+		try {
+			// Fetch multiple batches in parallel for faster loading
+			const batches = await Promise.all([fetchCardBatch(), fetchCardBatch(), fetchCardBatch()]);
+
+			// Flatten and add to pool
+			const newCards = batches.flat().filter((card) => card && card.cardmarket?.prices?.averageSellPrice !== undefined);
+			cardPoolRef.current = [...cardPoolRef.current, ...newCards];
+
+			// Remove duplicates by card ID
+			const uniqueCards = Array.from(new Map(cardPoolRef.current.map((card) => [card.id, card])).values());
+
+			// Limit pool size to prevent memory issues
+			if (uniqueCards.length > POOL_SIZE) {
+				// Keep the most recent cards
+				cardPoolRef.current = uniqueCards.slice(-POOL_SIZE);
+			} else {
+				cardPoolRef.current = uniqueCards;
+			}
+
+			console.log(`Card pool size: ${cardPoolRef.current.length}`);
+		} catch (error) {
+			console.error("Error preloading cards:", error);
+		} finally {
+			isLoadingPoolRef.current = false;
+		}
+	};
+
+	// Get a random card from the pool
+	const getRandomCard = () => {
+		const pool = cardPoolRef.current;
+
+		if (pool.length === 0) {
+			return null;
+		}
+
+		const randomIndex = Math.floor(Math.random() * pool.length);
+		return pool[randomIndex];
+	};
+
+	// Get random cards, refilling pool if needed
 	const getRandomCards = async () => {
-		const res = await fetch(`${API_BASE_URL}/api/random-cards?count=2`);
-		if (!res.ok) {
-			throw new Error(`Failed to fetch cards: ${res.statusText}`);
+		// If pool is low, preload more cards in the background
+		if (cardPoolRef.current.length < MIN_POOL_SIZE && !isLoadingPoolRef.current) {
+			preloadCards();
 		}
-		const cards = await res.json();
-		setCard1(cards[0]);
-		setCard2(cards[1]);
-		setResult(null);
-	};
 
-	useEffect(() => {
-		if (card1 && card2) {
-			console.log("Displayed cards:", card1.name, "vs", card2.name);
+		// Get cards from pool
+		let card1 = getRandomCard();
+		let card2 = getRandomCard();
+
+		// Ensure we have two different cards
+		while (card2 && card1 && card2.id === card1.id) {
+			card2 = getRandomCard();
 		}
-	}, [card1, card2]);
+
+		// If pool is empty or we don't have enough cards, wait for preload
+		if (!card1 || !card2) {
+			if (!isLoadingPoolRef.current) {
+				await preloadCards();
+				card1 = getRandomCard();
+				card2 = getRandomCard();
+				while (card2 && card1 && card2.id === card1.id) {
+					card2 = getRandomCard();
+				}
+			}
+		}
+
+		if (card1 && card2) {
+			setCard1(card1);
+			setCard2(card2);
+			setResult(null);
+		}
+	};
 
 	const handleGuess = (guess) => {
 		if (!card1 || !card2 || isFetchingRef.current) return;
@@ -62,12 +141,34 @@ function App() {
 
 			// Wait for animation to play (at least 1 second)
 			const transitionAfterAnimation = () => {
-				getRandomCard().then((newCard2) => {
+				// Get new card from pool (synchronous now!)
+				let newCard2 = getRandomCard();
+
+				// Ensure it's different from current card2
+				while (newCard2 && newCard2.id === currentCard2.id) {
+					newCard2 = getRandomCard();
+				}
+
+				// If pool is empty, trigger preload and wait
+				if (!newCard2) {
+					preloadCards().then(() => {
+						newCard2 = getRandomCard();
+						while (newCard2 && newCard2.id === currentCard2.id) {
+							newCard2 = getRandomCard();
+						}
+						if (newCard2) {
+							setCard1(currentCard2);
+							setCard2(newCard2);
+							setResult(null);
+							isFetchingRef.current = false;
+						}
+					});
+				} else {
 					setCard1(currentCard2);
 					setCard2(newCard2);
 					setResult(null);
 					isFetchingRef.current = false;
-				});
+				}
 			};
 
 			// Wait for animation to complete (1 second) before transitioning
@@ -76,7 +177,12 @@ function App() {
 	};
 
 	useEffect(() => {
-		getRandomCards();
+		// Preload cards on mount, then get random cards
+		const initialize = async () => {
+			await preloadCards();
+			await getRandomCards();
+		};
+		initialize();
 	}, []);
 
 	// Animate price from 0 to target price when result is shown
