@@ -11,6 +11,7 @@ function App() {
 	const [animatedPrice, setAnimatedPrice] = useState(0);
 	const [vsFillProgress, setVsFillProgress] = useState(0);
 	const [isSliding, setIsSliding] = useState(false);
+	const [score, setScore] = useState(0);
 	const isFetchingRef = useRef(false);
 	const vsAnimationFrameRef = useRef(null);
 	const vsTimeoutRef = useRef(null);
@@ -136,6 +137,11 @@ function App() {
 			price1,
 			price2,
 		});
+
+		// Update score
+		if (isCorrect) {
+			setScore((prevScore) => prevScore + 1);
+		}
 
 		// If correct, handle the transition
 		if (isCorrect) {
@@ -359,6 +365,10 @@ function App() {
 					</div>
 				</div>
 			)}
+			{/* Score Display */}
+			<div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-white z-50">
+				<div className="text-2xl font-bold">Score: {score}</div>
+			</div>
 			<div className="relative flex flex-row w-screen h-screen fixed inset-0 overflow-hidden">
 				{/* VS Badge */}
 				{card1 && card2 && (
@@ -435,7 +445,7 @@ function App() {
 					{/* Current card 2 - slides to the left to card 1's position */}
 					{card2 && (
 						<div
-							key={`card2-${card2.id}`}
+							key={card2.id}
 							className="absolute inset-0 w-full h-full z-10"
 							style={{
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
@@ -460,7 +470,10 @@ function App() {
 											{!result.isCorrect && (
 												<button
 													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors mt-4"
-													onClick={() => getRandomCards()}
+													onClick={() => {
+														setScore(0);
+														getRandomCards();
+													}}
 												>
 													Play Again
 												</button>
@@ -490,7 +503,7 @@ function App() {
 					{/* Next card 2 - slides in from the right */}
 					{nextCard2 && (
 						<div
-							key={`nextCard2-${nextCard2.id}`}
+							key={nextCard2.id}
 							className="absolute inset-0 w-full h-full z-0"
 							style={{
 								transform: isSliding ? "translateX(0)" : "translateX(100%)",
