@@ -6,9 +6,11 @@ import "./App.css";
 function App() {
 	const [card1, setCard1] = useState(null);
 	const [card2, setCard2] = useState(null);
+	const [nextCard2, setNextCard2] = useState(null);
 	const [result, setResult] = useState(null);
 	const [animatedPrice, setAnimatedPrice] = useState(0);
 	const [vsFillProgress, setVsFillProgress] = useState(0);
+	const [isSliding, setIsSliding] = useState(false);
 	const isFetchingRef = useRef(false);
 	const vsAnimationFrameRef = useRef(null);
 	const vsTimeoutRef = useRef(null);
@@ -142,9 +144,9 @@ function App() {
 			// Capture card2 value at the moment of the guess
 			const currentCard2 = card2;
 
-			// Wait for animations to complete (1s price + 0.8s VS fill = 1.8s total)
-			const transitionAfterAnimation = () => {
-				// Get new card from pool (synchronous now!)
+			// Wait for animations to complete (1s price + 0.8s VS fill = 1.8s) + 0.8s to show checkmark
+			const startSlideAnimation = () => {
+				// Get new card from pool BEFORE starting animation
 				let newCard2 = getRandomCard();
 
 				// Ensure it's different from current card2
@@ -160,22 +162,50 @@ function App() {
 							newCard2 = getRandomCard();
 						}
 						if (newCard2) {
-							setCard1(currentCard2);
-							setCard2(newCard2);
-							setResult(null);
-							isFetchingRef.current = false;
+							// Set the next card 2 so it's ready to slide in
+							setNextCard2(newCard2);
+							// Start the slide animation
+							setIsSliding(true);
+
+							// After slide completes, update cards
+							setTimeout(() => {
+								// First reset sliding state to prevent transition on new card
+								setIsSliding(false);
+								// Use requestAnimationFrame to ensure state updates happen after render
+								requestAnimationFrame(() => {
+									setCard1(currentCard2);
+									setCard2(newCard2);
+									setNextCard2(null);
+									setResult(null);
+									isFetchingRef.current = false;
+								});
+							}, 600); // Slide animation duration
 						}
 					});
 				} else {
-					setCard1(currentCard2);
-					setCard2(newCard2);
-					setResult(null);
-					isFetchingRef.current = false;
+					// Set the next card 2 so it's ready to slide in
+					setNextCard2(newCard2);
+					// Start the slide animation
+					setIsSliding(true);
+
+					// After slide completes, update cards
+					setTimeout(() => {
+						// First reset sliding state to prevent transition on new card
+						setIsSliding(false);
+						// Use requestAnimationFrame to ensure state updates happen after render
+						requestAnimationFrame(() => {
+							setCard1(currentCard2);
+							setCard2(newCard2);
+							setNextCard2(null);
+							setResult(null);
+							isFetchingRef.current = false;
+						});
+					}, 600); // Slide animation duration
 				}
 			};
 
-			// Wait for both animations to complete (1s price + 0.8s VS fill = 1.8s total)
-			setTimeout(transitionAfterAnimation, 1800);
+			// Wait for both animations to complete (1s price + 0.8s VS fill = 1.8s) + 0.8s to show checkmark
+			setTimeout(startSlideAnimation, 2600);
 		}
 	};
 
@@ -235,8 +265,6 @@ function App() {
 
 	// Animate VS circle fill from bottom to top after price animation completes
 	useEffect(() => {
-		console.log("VS Fill Effect triggered, result:", result);
-
 		// Cleanup any existing animations
 		if (vsTimeoutRef.current) {
 			clearTimeout(vsTimeoutRef.current);
@@ -248,13 +276,11 @@ function App() {
 		}
 
 		if (result && result.isCorrect) {
-			console.log("Result is correct, starting VS fill animation");
 			// Reset progress first
 			setVsFillProgress(0);
 
 			// Wait for price animation to complete (1 second) before starting VS fill
 			vsTimeoutRef.current = setTimeout(() => {
-				console.log("VS fill timeout fired, starting animation");
 				const duration = 800; // 0.8 second fill animation
 				const startTime = Date.now();
 
@@ -268,14 +294,12 @@ function App() {
 					const currentProgress = easeOutCubic;
 
 					setVsFillProgress(currentProgress);
-					console.log("VS fill progress:", currentProgress);
 
 					if (progress < 1) {
 						vsAnimationFrameRef.current = requestAnimationFrame(animate);
 					} else {
 						setVsFillProgress(1);
 						vsAnimationFrameRef.current = null;
-						console.log("VS fill animation complete");
 					}
 				};
 
@@ -316,13 +340,24 @@ function App() {
 						</div>
 						{result && (
 							<div className="mt-2">
-								VS Fill Progress: <span className="text-blue-400">{(vsFillProgress * 100).toFixed(1)}%</span>
+								VS Fill: <span className="text-blue-400">{(vsFillProgress * 100).toFixed(1)}%</span>
+								{result.isCorrect && (
+									<div className="mt-1">
+										VS Opacity:{" "}
+										<span className="text-purple-400">
+											{vsFillProgress >= 0.15 ? (Math.max(0, 1 - (vsFillProgress - 0.15) / 0.85) * 100).toFixed(0) : 100}%
+										</span>
+									</div>
+								)}
+								{result.isCorrect && vsFillProgress >= 1 && (
+									<span className="text-green-400 ml-2">✓ Checkmark should be visible</span>
+								)}
 							</div>
 						)}
 					</div>
 				</div>
 			)}
-			<div className="relative flex flex-row w-screen h-screen fixed inset-0">
+			<div className="relative flex flex-row w-screen h-screen fixed inset-0 overflow-hidden">
 				{/* VS Badge */}
 				{card1 && card2 && (
 					<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 rounded-full w-20 h-20 flex items-center justify-center shadow-lg overflow-hidden">
@@ -337,55 +372,136 @@ function App() {
 								}}
 							></div>
 						)}
-						{/* VS text */}
-						<span className="relative z-[2] text-black font-bold text-2xl">VS</span>
+						{/* VS text - fades out starting at 15% fill */}
+						{!(result && result.isCorrect && vsFillProgress >= 1) && (
+							<span
+								className="relative z-[2] text-black font-bold text-2xl"
+								style={{
+									opacity:
+										result && result.isCorrect && vsFillProgress >= 0.15
+											? Math.max(0, 1 - (vsFillProgress - 0.15) / 0.85) // Fade from 1 to 0 between 15% and 100%
+											: 1,
+									transition: "opacity 0.3s ease-out",
+								}}
+							>
+								VS
+							</span>
+						)}
+						{/* Checkmark - fades in when circle is fully green, positioned absolutely to not affect VS text */}
+						{result && result.isCorrect && (
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="32"
+								height="32"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="white"
+								strokeWidth="2.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								className="absolute inset-0 m-auto z-[2] transition-opacity duration-500"
+								style={{
+									opacity: vsFillProgress >= 1 ? 1 : 0,
+									pointerEvents: "none",
+									width: "32px",
+									height: "32px",
+								}}
+							>
+								<path d="M20 6 9 17l-5-5" />
+							</svg>
+						)}
 					</div>
 				)}
 				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
 					{card1 && (
-						<img
-							className="w-full h-full object-contain brightness-50 transition-all duration-500"
-							src={card1.images.large}
-							alt={card1.name}
-						/>
-					)}
-					{card1 && (
-						<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10 transition-opacity duration-500">
-							<p className="text-white text-4xl font-bold">{card1.name}</p>
-							<p className="text-white">{card1.set?.name}</p>
-							<p className="text-white">is worth</p>
-							<p className="text-white">${card1.cardmarket?.prices?.averageSellPrice || 0}</p>
-						</div>
+						<>
+							<img
+								className="w-full h-full object-contain brightness-50 transition-all duration-500"
+								src={card1.images.large}
+								alt={card1.name}
+							/>
+							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10 transition-opacity duration-500">
+								<p className="text-white text-4xl font-bold">{card1.name}</p>
+								<p className="text-white">{card1.set?.name}</p>
+								<p className="text-white">is worth</p>
+								<p className="text-white">${card1.cardmarket?.prices?.averageSellPrice || 0}</p>
+							</div>
+						</>
 					)}
 				</div>
-				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
+				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out overflow-visible">
+					{/* Current card 2 - slides to the left to card 1's position */}
 					{card2 && (
-						<img
-							className="w-full h-full object-contain brightness-50 transition-all duration-500"
-							src={card2.images.large}
-							alt={card2.name}
-						/>
-					)}
-					{card2 && card1 && (
-						<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
-							<p className="text-white text-4xl font-bold">{card2.name}</p>
-							<p className="text-white">{card2.set?.name}</p>
-							<p className="text-white">is worth</p>
-							{result ? (
-								<>
-									<p className={`text-2xl font-bold ${result.isCorrect ? "text-green-400" : "text-red-400"}`}>
-										${animatedPrice.toFixed(2)}
-									</p>
-									{!result.isCorrect && (
-										<button
-											className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors mt-4"
-											onClick={() => getRandomCards()}
-										>
-											Play Again
-										</button>
+						<div
+							className="absolute inset-0 w-full h-full"
+							style={{
+								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
+								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
+							}}
+						>
+							<img
+								className="w-full h-full object-contain brightness-50 transition-all duration-500"
+								src={card2.images.large}
+								alt={card2.name}
+							/>
+							{card1 && (
+								<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
+									<p className="text-white text-4xl font-bold">{card2.name}</p>
+									<p className="text-white">{card2.set?.name}</p>
+									<p className="text-white">is worth</p>
+									{result ? (
+										<>
+											<p className={`text-2xl font-bold ${result.isCorrect ? "text-green-400" : "text-red-400"}`}>
+												${animatedPrice.toFixed(2)}
+											</p>
+											{!result.isCorrect && (
+												<button
+													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors mt-4"
+													onClick={() => getRandomCards()}
+												>
+													Play Again
+												</button>
+											)}
+										</>
+									) : (
+										<>
+											<button
+												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+												onClick={() => handleGuess("more")}
+											>
+												More
+											</button>
+											<button
+												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+												onClick={() => handleGuess("less")}
+											>
+												Less
+											</button>
+											<p className="text-white">than {card1.name}</p>
+										</>
 									)}
-								</>
-							) : (
+								</div>
+							)}
+						</div>
+					)}
+					{/* Next card 2 - slides in from the right */}
+					{nextCard2 && (
+						<div
+							className="absolute inset-0 w-full h-full"
+							style={{
+								transform: isSliding ? "translateX(0)" : "translateX(100%)",
+								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
+							}}
+						>
+							<img
+								className="w-full h-full object-contain brightness-50 transition-all duration-500"
+								src={nextCard2.images.large}
+								alt={nextCard2.name}
+							/>
+							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
+								<p className="text-white text-4xl font-bold">{nextCard2.name}</p>
+								<p className="text-white">{nextCard2.set?.name}</p>
+								<p className="text-white">is worth</p>
 								<>
 									<button
 										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
@@ -399,9 +515,9 @@ function App() {
 									>
 										Less
 									</button>
-									<p className="text-white">than {card1.name}</p>
+									<p className="text-white">than {card1?.name}</p>
 								</>
-							)}
+							</div>
 						</div>
 					)}
 				</div>
