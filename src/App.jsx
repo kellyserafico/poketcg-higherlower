@@ -169,14 +169,15 @@ function App() {
 
 							// After slide completes, update cards
 							setTimeout(() => {
-								// First reset sliding state to prevent transition on new card
+								// Update cards first
+								setCard1(currentCard2);
+								setCard2(newCard2);
+								setResult(null);
+								// Reset sliding state immediately to prevent transition on new card
 								setIsSliding(false);
-								// Use requestAnimationFrame to ensure state updates happen after render
+								// Remove nextCard2 after a tiny delay to ensure smooth transition
 								requestAnimationFrame(() => {
-									setCard1(currentCard2);
-									setCard2(newCard2);
 									setNextCard2(null);
-									setResult(null);
 									isFetchingRef.current = false;
 								});
 							}, 600); // Slide animation duration
@@ -190,14 +191,15 @@ function App() {
 
 					// After slide completes, update cards
 					setTimeout(() => {
-						// First reset sliding state to prevent transition on new card
+						// Update cards first
+						setCard1(currentCard2);
+						setCard2(newCard2);
+						setResult(null);
+						// Reset sliding state immediately to prevent transition on new card
 						setIsSliding(false);
-						// Use requestAnimationFrame to ensure state updates happen after render
+						// Remove nextCard2 after a tiny delay to ensure smooth transition
 						requestAnimationFrame(() => {
-							setCard1(currentCard2);
-							setCard2(newCard2);
 							setNextCard2(null);
-							setResult(null);
 							isFetchingRef.current = false;
 						});
 					}, 600); // Slide animation duration
@@ -433,7 +435,8 @@ function App() {
 					{/* Current card 2 - slides to the left to card 1's position */}
 					{card2 && (
 						<div
-							className="absolute inset-0 w-full h-full"
+							key={`card2-${card2.id}`}
+							className="absolute inset-0 w-full h-full z-10"
 							style={{
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
 								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
@@ -487,7 +490,8 @@ function App() {
 					{/* Next card 2 - slides in from the right */}
 					{nextCard2 && (
 						<div
-							className="absolute inset-0 w-full h-full"
+							key={`nextCard2-${nextCard2.id}`}
+							className="absolute inset-0 w-full h-full z-0"
 							style={{
 								transform: isSliding ? "translateX(0)" : "translateX(100%)",
 								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
