@@ -12,6 +12,11 @@ function App() {
 	const [vsFillProgress, setVsFillProgress] = useState(0);
 	const [isSliding, setIsSliding] = useState(false);
 	const [score, setScore] = useState(0);
+	const [highScore, setHighScore] = useState(() => {
+		// Load high score from localStorage on initial render
+		const saved = localStorage.getItem("poketcg-highscore");
+		return saved ? parseInt(saved, 10) : 0;
+	});
 	const isFetchingRef = useRef(false);
 	const vsAnimationFrameRef = useRef(null);
 	const vsTimeoutRef = useRef(null);
@@ -150,7 +155,16 @@ function App() {
 
 		// Update score
 		if (isCorrect) {
-			setScore((prevScore) => prevScore + 1);
+			setScore((prevScore) => {
+				const newScore = prevScore + 1;
+				// Update high score if new score is higher
+				const currentHighScore = parseInt(localStorage.getItem("poketcg-highscore") || "0", 10);
+				if (newScore > currentHighScore) {
+					setHighScore(newScore);
+					localStorage.setItem("poketcg-highscore", newScore.toString());
+				}
+				return newScore;
+			});
 		}
 
 		// If correct, handle the transition
@@ -366,6 +380,7 @@ function App() {
 			{/* Score Display */}
 			<div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-white z-50">
 				<div className="text-2xl font-bold">Score: {score}</div>
+				<div className="text-lg mt-2 text-yellow-400">High Score: {highScore}</div>
 			</div>
 			<div className="relative flex flex-row w-screen h-screen fixed inset-0 overflow-hidden">
 				{/* VS Badge */}
@@ -443,7 +458,7 @@ function App() {
 					{/* Current card 2 - slides to the left to card 1's position */}
 					{card2 && (
 						<div
-							key={card2.id}
+							key={`card2-${card2.id}`}
 							className="absolute inset-0 w-full h-full z-10"
 							style={{
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
@@ -501,7 +516,7 @@ function App() {
 					{/* Next card 2 - slides in from the right */}
 					{nextCard2 && (
 						<div
-							key={nextCard2.id}
+							key={`nextCard2-${nextCard2.id}`}
 							className="absolute inset-0 w-full h-full z-0"
 							style={{
 								transform: isSliding ? "translateX(0)" : "translateX(100%)",
