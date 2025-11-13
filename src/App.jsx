@@ -88,6 +88,16 @@ function App() {
 		return pool[randomIndex];
 	};
 
+	// Preload an image and return a promise that resolves when loaded
+	const preloadImage = (src) => {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => resolve(img);
+			img.onerror = reject;
+			img.src = src;
+		});
+	};
+
 	// Get random cards, refilling pool if needed
 	const getRandomCards = async () => {
 		// If pool is low, preload more cards in the background
@@ -151,7 +161,7 @@ function App() {
 			const currentCard2 = card2;
 
 			// Wait for animations to complete (1s price + 0.8s VS fill = 1.8s) + 0.8s to show checkmark
-			const startSlideAnimation = () => {
+			const startSlideAnimation = async () => {
 				// Get new card from pool BEFORE starting animation
 				let newCard2 = getRandomCard();
 
@@ -162,34 +172,22 @@ function App() {
 
 				// If pool is empty, trigger preload and wait
 				if (!newCard2) {
-					preloadCards().then(() => {
+					await preloadCards();
+					newCard2 = getRandomCard();
+					while (newCard2 && newCard2.id === currentCard2.id) {
 						newCard2 = getRandomCard();
-						while (newCard2 && newCard2.id === currentCard2.id) {
-							newCard2 = getRandomCard();
-						}
-						if (newCard2) {
-							// Set the next card 2 so it's ready to slide in
-							setNextCard2(newCard2);
-							// Start the slide animation
-							setIsSliding(true);
+					}
+				}
 
-							// After slide completes, update cards
-							setTimeout(() => {
-								// Update cards first
-								setCard1(currentCard2);
-								setCard2(newCard2);
-								setResult(null);
-								// Reset sliding state immediately to prevent transition on new card
-								setIsSliding(false);
-								// Remove nextCard2 after a tiny delay to ensure smooth transition
-								requestAnimationFrame(() => {
-									setNextCard2(null);
-									isFetchingRef.current = false;
-								});
-							}, 600); // Slide animation duration
-						}
-					});
-				} else {
+				if (newCard2) {
+					// Preload the image before starting the slide animation
+					try {
+						await preloadImage(newCard2.images.large);
+					} catch (error) {
+						console.error("Error preloading image:", error);
+						// Continue anyway if image fails to load
+					}
+
 					// Set the next card 2 so it's ready to slide in
 					setNextCard2(newCard2);
 					// Start the slide animation
@@ -340,8 +338,8 @@ function App() {
 			{card1 && card2 && (
 				<div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-yellow-500 z-50 text-sm font-mono">
 					<div className="font-bold text-yellow-400 mb-2">DEBUG INFO</div>
-					<div>Card 1: ${price1.toFixed(2)}</div>
-					<div>Card 2: ${price2.toFixed(2)}</div>
+					<div>Card 1: <span className="text-yellow-400 font-bold">${price1.toFixed(2)}</span></div>
+					<div>Card 2: <span className="text-yellow-400 font-bold">${price2.toFixed(2)}</span></div>
 					<div className="mt-2 pt-2 border-t border-yellow-500">
 						<div className="font-bold">
 							Correct Answer: <span className="text-green-400">{correctAnswer}</span>
@@ -436,7 +434,7 @@ function App() {
 								<p className="text-white text-4xl font-bold">{card1.name}</p>
 								<p className="text-white">{card1.set?.name}</p>
 								<p className="text-white">is worth</p>
-								<p className="text-white">${card1.cardmarket?.prices?.averageSellPrice || 0}</p>
+								<p className="text-yellow-400 font-bold text-2xl">${card1.cardmarket?.prices?.averageSellPrice || 0}</p>
 							</div>
 						</>
 					)}
@@ -464,7 +462,7 @@ function App() {
 									<p className="text-white">is worth</p>
 									{result ? (
 										<>
-											<p className={`text-2xl font-bold ${result.isCorrect ? "text-green-400" : "text-red-400"}`}>
+											<p className="text-2xl font-bold text-yellow-400">
 												${animatedPrice.toFixed(2)}
 											</p>
 											{!result.isCorrect && (
