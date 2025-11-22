@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
+import Header from "./components/header";
 
 function App() {
 	const [card1, setCard1] = useState(null);
@@ -349,11 +350,16 @@ function App() {
 	return (
 		<>
 			{/* Debug Container */}
+			<Header />
 			{card1 && card2 && (
 				<div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-yellow-500 z-50 text-sm font-mono">
 					<div className="font-bold text-yellow-400 mb-2">DEBUG INFO</div>
-					<div>Card 1: <span className="text-yellow-400 font-bold">${price1.toFixed(2)}</span></div>
-					<div>Card 2: <span className="text-yellow-400 font-bold">${price2.toFixed(2)}</span></div>
+					<div>
+						Card 1: <span className="text-yellow-400 font-bold">${price1.toFixed(2)}</span>
+					</div>
+					<div>
+						Card 2: <span className="text-yellow-400 font-bold">${price2.toFixed(2)}</span>
+					</div>
 					<div className="mt-2 pt-2 border-t border-yellow-500">
 						<div className="font-bold">
 							Correct Answer: <span className="text-green-400">{correctAnswer}</span>
@@ -477,9 +483,7 @@ function App() {
 									<p className="text-white">is worth</p>
 									{result ? (
 										<>
-											<p className="text-2xl font-bold text-yellow-400">
-												${animatedPrice.toFixed(2)}
-											</p>
+											<p className="text-2xl font-bold text-yellow-400">${animatedPrice.toFixed(2)}</p>
 											{!result.isCorrect && (
 												<button
 													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors mt-4"
