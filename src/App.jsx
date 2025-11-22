@@ -351,8 +351,8 @@ function App() {
 
 	return (
 		<>
-			{/* Debug Container */}
 			<Header score={score} highScore={highScore} />
+			{/*Debug Container
 			{card1 && card2 && (
 				<div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-yellow-500 z-50 text-sm font-mono">
 					<div className="font-bold text-yellow-400 mb-2">DEBUG INFO</div>
@@ -384,8 +384,11 @@ function App() {
 						)}
 					</div>
 				</div>
-			)}
-			<div className="relative flex flex-row w-screen h-screen fixed inset-0 overflow-hidden">
+			)}*/}
+			<div
+				className="relative flex flex-row w-screen fixed left-0 right-0 bottom-0 overflow-hidden"
+				style={{ top: "80px", height: "calc(100vh - 80px)" }}
+			>
 				{/* VS Badge */}
 				{card1 && card2 && (
 					<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 rounded-full w-20 h-20 flex items-center justify-center shadow-lg overflow-hidden">
