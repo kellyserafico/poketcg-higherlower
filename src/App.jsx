@@ -386,8 +386,17 @@ function App() {
 				</div>
 			)}*/}
 			<div
-				className="relative flex flex-row w-screen fixed left-0 right-0 bottom-0 overflow-hidden"
-				style={{ top: "80px", height: "calc(100vh - 80px)" }}
+				className="flex flex-row items-center justify-center gap-4 bg-gray-900"
+				style={{
+					width: "100vw",
+					height: "calc(100vh - 80px)",
+					position: "fixed",
+					top: "80px",
+					left: 0,
+					right: 0,
+					bottom: 0,
+					margin: "0 auto",
+				}}
 			>
 				{/* VS Badge */}
 				{card1 && card2 && (
@@ -412,7 +421,6 @@ function App() {
 										result && result.isCorrect && vsFillProgress >= 0.15
 											? Math.max(0, 1 - (vsFillProgress - 0.15) / 0.85) // Fade from 1 to 0 between 15% and 100%
 											: 1,
-									transition: "opacity 0.3s ease-out",
 								}}
 							>
 								VS
@@ -430,7 +438,7 @@ function App() {
 								strokeWidth="2.5"
 								strokeLinecap="round"
 								strokeLinejoin="round"
-								className="absolute inset-0 m-auto z-[2] transition-opacity duration-500"
+								className="absolute inset-0 m-auto z-[2]"
 								style={{
 									opacity: vsFillProgress >= 1 ? 1 : 0,
 									pointerEvents: "none",
@@ -443,11 +451,14 @@ function App() {
 						)}
 					</div>
 				)}
-				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
+				<div
+					className="relative flex items-center justify-center bg-gray-900"
+					style={{ width: "800px", maxWidth: "45vw", minHeight: "100%" }}
+				>
 					{card1 && (
 						<>
 							<CardContainer card={card1} />
-							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10 transition-opacity duration-500">
+							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
 								<p className="text-white text-4xl font-bold">{card1.name}</p>
 								<p className="text-white">{card1.set?.name}</p>
 								<p className="text-white">is worth</p>
@@ -456,15 +467,17 @@ function App() {
 						</>
 					)}
 				</div>
-				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out overflow-visible">
+				<div
+					className="relative flex items-center justify-center bg-gray-900 overflow-visible"
+					style={{ width: "800px", maxWidth: "45vw", minHeight: "100%" }}
+				>
 					{/* Current card 2 - slides to the left to card 1's position */}
 					{card2 && (
 						<div
 							key={`card2-${card2.id}`}
-							className="absolute inset-0 w-full h-full z-10"
+							className="absolute inset-0 w-full h-full z-10 flex items-center justify-center"
 							style={{
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
-								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
 							}}
 						>
 							<CardContainer card={card2} />
@@ -478,7 +491,7 @@ function App() {
 											<p className="text-2xl font-bold text-yellow-400">${animatedPrice.toFixed(2)}</p>
 											{!result.isCorrect && (
 												<button
-													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors mt-4"
+													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black mt-4"
 													onClick={() => {
 														setScore(0);
 														getRandomCards();
@@ -491,13 +504,13 @@ function App() {
 									) : (
 										<>
 											<button
-												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
 												onClick={() => handleGuess("more")}
 											>
 												More
 											</button>
 											<button
-												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
 												onClick={() => handleGuess("less")}
 											>
 												Less
@@ -513,30 +526,25 @@ function App() {
 					{nextCard2 && (
 						<div
 							key={`nextCard2-${nextCard2.id}`}
-							className="absolute inset-0 w-full h-full z-0"
+							className="absolute inset-0 w-full h-full z-0 flex items-center justify-center"
 							style={{
 								transform: isSliding ? "translateX(0)" : "translateX(100%)",
-								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
 							}}
 						>
-							<img
-								className="w-full h-full object-contain brightness-50 transition-all duration-500"
-								src={nextCard2.images.large}
-								alt={nextCard2.name}
-							/>
+							<img className="w-full h-full object-contain brightness-50" src={nextCard2.images.large} alt={nextCard2.name} />
 							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
 								<p className="text-white text-4xl font-bold">{nextCard2.name}</p>
 								<p className="text-white">{nextCard2.set?.name}</p>
 								<p className="text-white">is worth</p>
 								<>
 									<button
-										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
 										onClick={() => handleGuess("more")}
 									>
 										More
 									</button>
 									<button
-										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black transition-colors"
+										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
 										onClick={() => handleGuess("less")}
 									>
 										Less

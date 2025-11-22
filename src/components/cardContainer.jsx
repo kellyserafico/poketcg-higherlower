@@ -35,21 +35,25 @@ export default function CardContainer({ card }) {
 
 	return (
 		<div
-			className="border-6 rounded-lg flex flex-col items-start justify-center gap-2 py-4 px-4"
-			style={{ borderColor: typeColor }}
+			className="border-6 rounded-lg flex flex-col items-start justify-center gap-2 py-4 px-4 overflow-hidden"
+			style={{
+				borderColor: typeColor,
+				width: "100%",
+				maxWidth: "700px",
+				height: "90vh",
+				maxHeight: "800px",
+			}}
 		>
-			<p className="text-xl text-center" style={{ color: typeColor }}>
+			<p className="text-xl w-full" style={{ color: typeColor }}>
 				{card.name.toUpperCase()}
 			</p>
 			<p className="text-[10px] text-center text-white px-2 py-1 rounded-md" style={{ backgroundColor: typeColor }}>
 				{card.set?.name.toUpperCase()}
 			</p>
 
-			<img
-				className="w-full transition-all duration-500 object-contain mx-auto"
-				src={card.images.large}
-				alt={card.name || "Pokemon card"}
-			/>
+			<div className="flex-1 w-full flex items-center justify-center overflow-hidden">
+				<img className="w-full h-full object-contain" src={card.images.large} alt={card.name || "Pokemon card"} />
+			</div>
 		</div>
 	);
 }
