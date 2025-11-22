@@ -469,11 +469,7 @@ function App() {
 								transition: isSliding ? "transform 0.6s ease-in-out" : "none",
 							}}
 						>
-							<img
-								className="w-full h-full object-contain brightness-50 transition-all duration-500"
-								src={card2.images.large}
-								alt={card2.name}
-							/>
+							<CardContainer card={card2} />
 							{card1 && (
 								<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
 									<p className="text-white text-4xl font-bold">{card2.name}</p>
