@@ -34,7 +34,7 @@ function App() {
 			// If no page specified, use a random page
 			const targetPage = page !== null ? page : Math.floor(Math.random() * 100); // ~25k cards / 250 per page = ~100 pages
 
-			const res = await fetch(`https://api.pokemontcg.io/v2/cards?pageSize=${BATCH_SIZE}&page=${targetPage}&q=supertype:pokemon`);
+			const res = await fetch(`/api/v2/cards?pageSize=${BATCH_SIZE}&page=${targetPage}&q=supertype:pokemon`);
 
 			if (!res.ok) {
 				throw new Error(`API error: ${res.status}`);
