@@ -352,7 +352,7 @@ function App() {
 	return (
 		<>
 			{/* Debug Container */}
-			<Header />
+			<Header score={score} highScore={highScore} />
 			{card1 && card2 && (
 				<div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-yellow-500 z-50 text-sm font-mono">
 					<div className="font-bold text-yellow-400 mb-2">DEBUG INFO</div>
@@ -385,11 +385,6 @@ function App() {
 					</div>
 				</div>
 			)}
-			{/* Score Display */}
-			<div className="fixed bottom-4 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg border-2 border-white z-50">
-				<div className="text-2xl font-bold">Score: {score}</div>
-				<div className="text-lg mt-2 text-yellow-400">High Score: {highScore}</div>
-			</div>
 			<div className="relative flex flex-row w-screen h-screen fixed inset-0 overflow-hidden">
 				{/* VS Badge */}
 				{card1 && card2 && (

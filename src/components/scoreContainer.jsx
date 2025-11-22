@@ -5,14 +5,17 @@ export default function ScoreContainer({ score, label, borderColor, icon = null 
 	const styledIcon = icon ? cloneElement(icon, { color: iconColor, fill: iconColor }) : null;
 
 	return (
-		<div className="flex flex-row gap-2 border-2 rounded-md p-2 bg-[#1A1A3E]" style={{ borderColor: borderColor || "#FFFFFF" }}>
-			<div className="text-2xl font-bold" style={{ color: borderColor || "#FFFFFF" }}>
-				{styledIcon} {score}
+		<div
+			className="flex flex-row gap-2 border-3 rounded-md bg-[#1A1A3E] py-3 px-4 items-center justify-center"
+			style={{ borderColor: borderColor || "#FFFFFF" }}
+		>
+			<div className="flex items-center justify-center" style={{ color: borderColor || "#FFFFFF" }}>
+				{styledIcon}
 			</div>
-			<div>
-				<div className="text-sm" style={{ color: borderColor || "#FFFFFF" }}>
-					{label.toUpperCase()}
-				</div>
+
+			<div className="text-sm flex flex-col justify-center" style={{ color: borderColor || "#FFFFFF" }}>
+				<p className="text-[10px]">{label.toUpperCase()}</p>
+				<p className="text-white">{score}</p>
 			</div>
 		</div>
 	);
