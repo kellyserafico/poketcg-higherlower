@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import CardContainer from "./components/cardContainer";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
@@ -35,6 +36,7 @@ function App() {
 			// If no page specified, use a random page
 			const targetPage = page !== null ? page : Math.floor(Math.random() * 100); // ~25k cards / 250 per page = ~100 pages
 
+			// Always use proxy to avoid CORS issues
 			const res = await fetch(`/api/v2/cards?pageSize=${BATCH_SIZE}&page=${targetPage}&q=supertype:pokemon`);
 
 			if (!res.ok) {
@@ -446,11 +448,7 @@ function App() {
 				<div className="relative w-1/2 h-full flex items-center justify-center bg-gray-900 transition-all duration-500 ease-in-out">
 					{card1 && (
 						<>
-							<img
-								className="w-full h-full object-contain brightness-50 transition-all duration-500"
-								src={card1.images.large}
-								alt={card1.name}
-							/>
+							<CardContainer card={card1} />
 							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10 transition-opacity duration-500">
 								<p className="text-white text-4xl font-bold">{card1.name}</p>
 								<p className="text-white">{card1.set?.name}</p>
