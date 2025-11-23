@@ -348,7 +348,7 @@ function App() {
 	const price1 = card1?.cardmarket?.prices?.averageSellPrice || 0;
 	const price2 = card2?.cardmarket?.prices?.averageSellPrice || 0;
 	const correctAnswer = price1 && price2 ? (price2 > price1 ? "More" : "Less") : null;
-
+	console.log(card1);
 	return (
 		<>
 			<Header score={score} highScore={highScore} />
@@ -458,12 +458,7 @@ function App() {
 					{card1 && (
 						<>
 							<CardContainer card={card1} />
-							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
-								<p className="text-white text-4xl font-bold">{card1.name}</p>
-								<p className="text-white">{card1.set?.name}</p>
-								<p className="text-white">is worth</p>
-								<p className="text-yellow-400 font-bold text-2xl">${card1.cardmarket?.prices?.averageSellPrice || 0}</p>
-							</div>
+							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10"></div>
 						</>
 					)}
 				</div>
@@ -483,8 +478,6 @@ function App() {
 							<CardContainer card={card2} />
 							{card1 && (
 								<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
-									<p className="text-white text-4xl font-bold">{card2.name}</p>
-									<p className="text-white">{card2.set?.name}</p>
 									<p className="text-white">is worth</p>
 									{result ? (
 										<>

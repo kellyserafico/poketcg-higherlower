@@ -1,24 +1,24 @@
 // Map Pokemon types to colors
 const getTypeColor = (type) => {
 	const typeColors = {
-		Fire: "#FF6B35",
-		Water: "#4A90E2",
-		Grass: "#7CB342",
-		Electric: "#FFD700",
-		Psychic: "#9C27B0",
-		Ice: "#81D4FA",
-		Dragon: "#6A1B9A",
-		Dark: "#424242",
-		Fairy: "#F48FB1",
-		Normal: "#A8A878",
-		Fighting: "#C03028",
-		Flying: "#A890F0",
-		Poison: "#A040A0",
-		Ground: "#E0C068",
-		Rock: "#B8A038",
-		Bug: "#A8B820",
-		Ghost: "#705898",
-		Steel: "#B8B8D0",
+		Normal: "#A8A77A",
+		Fire: "#EE8130",
+		Water: "#6390F0",
+		Electric: "#F7D02C",
+		Grass: "#7AC74C",
+		Ice: "#96D9D6",
+		Fighting: "#C22E28",
+		Poison: "#A33EA1",
+		Ground: "#E2BF65",
+		Flying: "#A98FF3",
+		Psychic: "#F95587",
+		Bug: "#A6B91A",
+		Rock: "#B6A136",
+		Ghost: "#735797",
+		Dragon: "#6F35FC",
+		Dark: "#705746",
+		Steel: "#B7B7CE",
+		Fairy: "#D685AD",
 	};
 
 	return typeColors[type] || "#FFFFFF"; // Default to white if type not found
@@ -42,17 +42,31 @@ export default function CardContainer({ card }) {
 				maxWidth: "700px",
 				height: "90vh",
 				maxHeight: "800px",
+				background: "linear-gradient(180deg, #1A1A3E 0%, #2D2D5A 100%)",
 			}}
 		>
-			<p className="text-xl w-full" style={{ color: typeColor }}>
-				{card.name.toUpperCase()}
-			</p>
-			<p className="text-[10px] text-center text-white px-2 py-1 rounded-md" style={{ backgroundColor: typeColor }}>
-				{card.set?.name.toUpperCase()}
-			</p>
+			<div className="flex flex-row justify-between w-full">
+				<div className="flex flex-col">
+					<p className="text-xl w-full" style={{ color: typeColor }}>
+						{card.name.toUpperCase()}
+					</p>
+					<p className="text-[10px] text-center text-white px-2 py-1 rounded-md" style={{ backgroundColor: typeColor }}>
+						{card.set?.name.toUpperCase()}
+					</p>
+				</div>
+				<div className="w-[100px] flex items-center justify-center bg-[#00000080] border-4 rounded-md border-[#ffffff4d]">
+					<p className="text-white text-xs font-bold">
+						{card.number || "?"}/{card.set?.total || "?"}
+					</p>
+				</div>
+			</div>
 
 			<div className="flex-1 w-full flex items-center justify-center overflow-hidden">
 				<img className="w-full h-full object-contain" src={card.images.large} alt={card.name || "Pokemon card"} />
+			</div>
+			<div className="m-auto flex flex-col items-center justify-center">
+				<p className="text-white">is worth</p>
+				<p className="text-yellow-400 font-bold text-2xl">${card.cardmarket?.prices?.averageSellPrice || 0}</p>
 			</div>
 		</div>
 	);

@@ -4,19 +4,8 @@ import { TrophyIcon } from "lucide-react";
 export default function Header({ score, highScore }) {
 	return (
 		<div
-			style={{
-				display: "flex",
-				flexDirection: "row",
-				justifyContent: "space-between",
-				alignItems: "center",
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				zIndex: 50,
-				padding: "16px",
-				backgroundColor: "#5865F2",
-			}}
+			className="flex flex-row justify-between items-center fixed top-0 left-0 right-0 z-50 p-4"
+			style={{ background: "linear-gradient(180deg, #5865F2 0%, #7B68EE 100%)" }}
 		>
 			<h1 className="text-2xl font-bold">PokéTCG Higher Lower</h1>
 			<div className="flex flex-row gap-4">
