@@ -457,7 +457,7 @@ function App() {
 				>
 					{card1 && (
 						<>
-							<CardContainer card={card1} />
+							<CardContainer card={card1} showPrice={true} />
 							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10"></div>
 						</>
 					)}

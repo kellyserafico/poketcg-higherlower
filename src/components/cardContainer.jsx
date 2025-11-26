@@ -24,7 +24,7 @@ const getTypeColor = (type) => {
 	return typeColors[type] || "#FFFFFF"; // Default to white if type not found
 };
 
-export default function CardContainer({ card }) {
+export default function CardContainer({ card, showPrice = false }) {
 	if (!card || !card.images || !card.images.large) {
 		return null;
 	}
@@ -64,10 +64,13 @@ export default function CardContainer({ card }) {
 			<div className="flex-1 w-full flex items-center justify-center overflow-hidden">
 				<img className="w-full h-full object-contain" src={card.images.large} alt={card.name || "Pokemon card"} />
 			</div>
-			<div className="m-auto flex flex-col items-center justify-center">
-				<p className="text-white">is worth</p>
-				<p className="text-yellow-400 font-bold text-2xl">${card.cardmarket?.prices?.averageSellPrice || 0}</p>
-			</div>
+			{showPrice && (
+				<div className="m-auto flex flex-col items-center justify-center">
+					<p className="text-white">is worth</p>
+					<p className="text-yellow-400 font-bold text-2xl">${card.cardmarket?.prices?.averageSellPrice || 0}</p>
+				</div>
+			)}
+			{!showPrice && <div className="m-auto flex flex-col items-center justify-center">skldfjklsdf</div>}
 		</div>
 	);
 }
