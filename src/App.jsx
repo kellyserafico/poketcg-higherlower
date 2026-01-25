@@ -472,7 +472,7 @@ function App() {
 							key={`card2-${card2.id}`}
 							className="absolute inset-0 w-full h-full z-10 flex items-center justify-center"
 							style={{
-								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
+								transform: isSliding ? "translateX(calc(-100% - 1rem))" : "translateX(0)",
 								opacity: isSliding ? 0.7 : 1,
 								transition: "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
 							}}
