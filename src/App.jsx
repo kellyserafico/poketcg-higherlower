@@ -223,7 +223,7 @@ function App() {
 							setNextCard2(null);
 							isFetchingRef.current = false;
 						});
-					}, 600); // Slide animation duration
+					}, 800); // Slide animation duration (matches CSS transition)
 				}
 			};
 
@@ -473,6 +473,8 @@ function App() {
 							className="absolute inset-0 w-full h-full z-10 flex items-center justify-center"
 							style={{
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
+								opacity: isSliding ? 0.7 : 1,
+								transition: "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
 							}}
 						>
 							<CardContainer
@@ -528,29 +530,34 @@ function App() {
 							className="absolute inset-0 w-full h-full z-0 flex items-center justify-center"
 							style={{
 								transform: isSliding ? "translateX(0)" : "translateX(100%)",
+								transition: "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
 							}}
 						>
-							<img className="w-full h-full object-contain brightness-50" src={nextCard2.images.large} alt={nextCard2.name} />
-							<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
-								<p className="text-white text-4xl font-bold">{nextCard2.name}</p>
-								<p className="text-white">{nextCard2.set?.name}</p>
-								<p className="text-white">is worth</p>
-								<>
-									<button
-										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
-										onClick={() => handleGuess("more")}
-									>
-										More
-									</button>
-									<button
-										className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
-										onClick={() => handleGuess("less")}
-									>
-										Less
-									</button>
-									<p className="text-white">than {card1?.name}</p>
-								</>
-							</div>
+							<CardContainer
+								card={nextCard2}
+								bottomContent={
+									card1 ? (
+										<>
+											<p className="text-white">is worth</p>
+											<div className="flex flex-row items-center justify-center gap-4">
+												<button
+													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
+													onClick={() => handleGuess("more")}
+												>
+													More
+												</button>
+												<button
+													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
+													onClick={() => handleGuess("less")}
+												>
+													Less
+												</button>
+											</div>
+											<p className="text-white">than {card1.name}</p>
+										</>
+									) : null
+								}
+							/>
 						</div>
 					)}
 				</div>
