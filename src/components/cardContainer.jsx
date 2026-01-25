@@ -24,7 +24,7 @@ const getTypeColor = (type) => {
 	return typeColors[type] || "#FFFFFF"; // Default to white if type not found
 };
 
-export default function CardContainer({ card, showPrice = false }) {
+export default function CardContainer({ card, showPrice = false, bottomContent = null }) {
 	if (!card || !card.images || !card.images.large) {
 		return null;
 	}
@@ -54,11 +54,11 @@ export default function CardContainer({ card, showPrice = false }) {
 						{card.set?.name.toUpperCase()}
 					</p>
 				</div>
-				<div className="w-[100px] flex items-center justify-center bg-[#00000080] border-4 rounded-md border-[#ffffff4d]">
+				{/*<div className="w-[100px] flex items-center justify-center bg-[#00000080] border-4 rounded-md border-[#ffffff4d]">
 					<p className="text-white text-xs font-bold">
 						{card.number || "?"}/{card.set?.total || "?"}
 					</p>
-				</div>
+				</div>*/}
 			</div>
 
 			<div className="flex-1 w-full flex items-center justify-center overflow-hidden">
@@ -70,7 +70,11 @@ export default function CardContainer({ card, showPrice = false }) {
 					<p className="text-yellow-400 font-bold text-2xl">${card.cardmarket?.prices?.averageSellPrice || 0}</p>
 				</div>
 			)}
-			{!showPrice && <div className="m-auto flex flex-col items-center justify-center">skldfjklsdf</div>}
+			{bottomContent && (
+				<div className="m-auto flex flex-col items-center justify-center">
+					{bottomContent}
+				</div>
+			)}
 		</div>
 	);
 }

@@ -475,44 +475,50 @@ function App() {
 								transform: isSliding ? "translateX(-50vw)" : "translateX(0)",
 							}}
 						>
-							<CardContainer card={card2} />
-							{card1 && (
-								<div className="absolute inset-0 flex flex-col justify-center items-center gap-2 z-10">
-									<p className="text-white">is worth</p>
-									{result ? (
+							<CardContainer
+								card={card2}
+								bottomContent={
+									card1 ? (
 										<>
-											<p className="text-2xl font-bold text-yellow-400">${animatedPrice.toFixed(2)}</p>
-											{!result.isCorrect && (
-												<button
-													className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black mt-4"
-													onClick={() => {
-														setScore(0);
-														getRandomCards();
-													}}
-												>
-													Play Again
-												</button>
+											<p className="text-white">is worth</p>
+											{result ? (
+												<>
+													<p className="text-2xl font-bold text-yellow-400">${animatedPrice.toFixed(2)}</p>
+													{!result.isCorrect && (
+														<button
+															className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black mt-4"
+															onClick={() => {
+																setScore(0);
+																getRandomCards();
+															}}
+														>
+															Play Again
+														</button>
+													)}
+												</>
+											) : (
+												<>
+													<div className="flex flex-row items-center justify-center gap-4">
+														<button
+															className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
+															onClick={() => handleGuess("more")}
+														>
+															More
+														</button>
+														<button
+															className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
+															onClick={() => handleGuess("less")}
+														>
+															Less
+														</button>
+													</div>
+													<p className="text-white">than {card1.name}</p>
+												</>
 											)}
 										</>
-									) : (
-										<>
-											<button
-												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
-												onClick={() => handleGuess("more")}
-											>
-												More
-											</button>
-											<button
-												className="text-white rounded-full border-3 border-white py-4 px-8 cursor-pointer hover:bg-white hover:text-black"
-												onClick={() => handleGuess("less")}
-											>
-												Less
-											</button>
-											<p className="text-white">than {card1.name}</p>
-										</>
-									)}
-								</div>
-							)}
+									) : null
+								}
+							/>
 						</div>
 					)}
 					{/* Next card 2 - slides in from the right */}
