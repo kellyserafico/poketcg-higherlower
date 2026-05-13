@@ -21,10 +21,10 @@ function App() {
 	};
 
 	const handleBack = () => {
-		if (multiplayerSession?.ws) {
-			multiplayerSession.ws.close();
-			setMultiplayerSession(null);
+		if (multiplayerSession?.peer) {
+			multiplayerSession.peer.destroy();
 		}
+		setMultiplayerSession(null);
 		setPage("home");
 		setSelectedSet(null);
 	};
@@ -34,9 +34,11 @@ function App() {
 	if (page === "multiplayer-game" && multiplayerSession) {
 		return (
 			<MultiplayerGamePage
-				ws={multiplayerSession.ws}
-				players={multiplayerSession.players}
+				peer={multiplayerSession.peer}
+				conn={multiplayerSession.conn}
 				isHost={multiplayerSession.isHost}
+				myName={multiplayerSession.myName}
+				opponentName={multiplayerSession.opponentName}
 				roomCode={multiplayerSession.roomCode}
 				onBack={handleBack}
 			/>

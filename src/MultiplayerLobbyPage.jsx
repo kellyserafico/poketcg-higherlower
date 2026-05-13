@@ -1,87 +1,102 @@
 import { useState, useRef } from "react";
+import Peer from "peerjs";
 
-const WS_URL = "ws://localhost:8080";
+function makeRoomCode() {
+	return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
 
 export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
-	const [step, setStep] = useState("name"); // name | mode | hosting | joining | waiting
+	const [step, setStep] = useState("name"); // name | mode | waiting | joining
 	const [playerName, setPlayerName] = useState("");
-	const [mode, setMode] = useState(null); // 'host' | 'join'
-	const [roomCodeInput, setRoomCodeInput] = useState("");
 	const [roomCode, setRoomCode] = useState(null);
+	const [roomCodeInput, setRoomCodeInput] = useState("");
 	const [error, setError] = useState(null);
-	const [players, setPlayers] = useState([]);
-	const wsRef = useRef(null);
+	const [connecting, setConnecting] = useState(false);
+	const peerRef = useRef(null);
 
-	const connect = () => {
-		return new Promise((resolve, reject) => {
-			const ws = new WebSocket(WS_URL);
-			ws.onopen = () => resolve(ws);
-			ws.onerror = () => reject(new Error("Could not connect to server. Make sure it's running."));
+	const handleHost = () => {
+		setError(null);
+		const code = makeRoomCode();
+		const peer = new Peer(code);
+		peerRef.current = peer;
+
+		peer.on("open", (id) => {
+			setRoomCode(id);
+			setStep("waiting");
+		});
+
+		peer.on("connection", (conn) => {
+			conn.on("open", () => {
+				conn.send({ type: "welcome", hostName: playerName });
+			});
+			conn.on("data", (data) => {
+				if (data.type === "guest-ready") {
+					onGameStart({ peer, conn, isHost: true, myName: playerName, opponentName: data.guestName, roomCode });
+				}
+			});
+			conn.on("error", () => setError("Connection error. Try again."));
+		});
+
+		peer.on("error", (err) => {
+			if (err.type === "unavailable-id") {
+				// Code collision — retry with a new code
+				peer.destroy();
+				handleHost();
+			} else {
+				setError("Could not create room. Check your connection.");
+			}
 		});
 	};
 
-	const handleHost = async () => {
-		setError(null);
-		try {
-			const ws = await connect();
-			wsRef.current = ws;
-
-			ws.onmessage = (event) => {
-				const msg = JSON.parse(event.data);
-				if (msg.type === "room-created") {
-					setRoomCode(msg.roomCode);
-					setStep("waiting");
-				}
-				if (msg.type === "player-joined") {
-					setPlayers(msg.players);
-					// Both players connected — start game
-					if (msg.players.length === 2) {
-						onGameStart({ ws, players: msg.players, isHost: true, roomCode: msg.players[0]?.roomCode });
-					}
-				}
-				if (msg.type === "player-joined" && msg.players.length === 2) {
-					onGameStart({ ws, players: msg.players, isHost: true, roomCode });
-				}
-			};
-
-			ws.send(JSON.stringify({ type: "create-room", playerName }));
-			setMode("host");
-		} catch (e) {
-			setError(e.message);
-		}
-	};
-
-	const handleJoin = async () => {
+	const handleJoin = () => {
 		if (!roomCodeInput.trim()) {
 			setError("Enter a room code");
 			return;
 		}
 		setError(null);
-		try {
-			const ws = await connect();
-			wsRef.current = ws;
+		setConnecting(true);
+		const peer = new Peer();
+		peerRef.current = peer;
 
-			ws.onmessage = (event) => {
-				const msg = JSON.parse(event.data);
-				if (msg.type === "error") {
-					setError(msg.message);
-					ws.close();
-					setStep("joining");
-				}
-				if (msg.type === "player-joined") {
-					setPlayers(msg.players);
-					if (msg.players.length === 2) {
-						onGameStart({ ws, players: msg.players, isHost: false, roomCode: roomCodeInput.toUpperCase() });
-					}
-				}
-			};
+		peer.on("open", () => {
+			const conn = peer.connect(roomCodeInput.trim().toUpperCase());
 
-			ws.send(JSON.stringify({ type: "join-room", roomCode: roomCodeInput.toUpperCase(), playerName }));
-			setMode("join");
-			setStep("joining");
-		} catch (e) {
-			setError(e.message);
-		}
+			conn.on("open", () => {});
+
+			conn.on("data", (data) => {
+				if (data.type === "welcome") {
+					conn.send({ type: "guest-ready", guestName: playerName });
+					onGameStart({
+						peer,
+						conn,
+						isHost: false,
+						myName: playerName,
+						opponentName: data.hostName,
+						roomCode: roomCodeInput.trim().toUpperCase(),
+					});
+				}
+			});
+
+			conn.on("error", () => {
+				setError("Room not found. Check the code.");
+				setConnecting(false);
+				peer.destroy();
+			});
+
+			// Timeout if no response in 8s
+			setTimeout(() => {
+				if (conn.open === false) {
+					setError("Room not found. Check the code.");
+					setConnecting(false);
+					peer.destroy();
+				}
+			}, 8000);
+		});
+
+		peer.on("error", () => {
+			setError("Could not connect. Check your connection.");
+			setConnecting(false);
+		});
 	};
 
 	const copyCode = () => {
@@ -91,7 +106,10 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 	return (
 		<div className="min-h-screen bg-black text-white flex flex-col items-center justify-center relative">
 			<button
-				onClick={onBack}
+				onClick={() => {
+					peerRef.current?.destroy();
+					onBack();
+				}}
 				className="fixed top-6 left-8 text-white/30 text-[10px] tracking-widest uppercase hover:text-white/70 transition-colors duration-300 cursor-pointer"
 			>
 				← Back
@@ -103,7 +121,7 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 					<h1 className="text-4xl font-light tracking-wide">Multiplayer</h1>
 				</div>
 
-				{/* Step: Enter name */}
+				{/* Step: name */}
 				{step === "name" && (
 					<div className="flex flex-col gap-4 w-full">
 						<input
@@ -113,6 +131,7 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 							onChange={(e) => setPlayerName(e.target.value)}
 							onKeyDown={(e) => e.key === "Enter" && playerName.trim() && setStep("mode")}
 							maxLength={20}
+							autoFocus
 							className="w-full bg-transparent border border-white/15 text-white text-sm placeholder-white/25 px-5 py-3 rounded-full focus:outline-none focus:border-white/35 tracking-wide transition-colors text-center"
 						/>
 						<button
@@ -125,7 +144,7 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 					</div>
 				)}
 
-				{/* Step: Choose mode */}
+				{/* Step: mode */}
 				{step === "mode" && (
 					<div className="flex flex-col gap-4 w-full">
 						<p className="text-white/40 text-xs text-center tracking-wide">
@@ -146,14 +165,14 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 					</div>
 				)}
 
-				{/* Step: Waiting as host */}
+				{/* Step: waiting (host) */}
 				{step === "waiting" && roomCode && (
 					<div className="flex flex-col items-center gap-6 w-full">
-						<p className="text-white/30 text-xs tracking-widest uppercase">Share this code</p>
+						<p className="text-white/30 text-[10px] tracking-widest uppercase">Share this code</p>
 						<button
 							onClick={copyCode}
-							className="text-6xl font-light tracking-[0.3em] text-white hover:text-white/70 transition-colors cursor-pointer select-all"
 							title="Click to copy"
+							className="text-5xl font-light tracking-[0.3em] text-white hover:text-white/70 transition-colors cursor-pointer select-all"
 						>
 							{roomCode}
 						</button>
@@ -165,7 +184,7 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 					</div>
 				)}
 
-				{/* Step: Join a room */}
+				{/* Step: join */}
 				{step === "joining" && (
 					<div className="flex flex-col gap-4 w-full">
 						<p className="text-white/40 text-xs text-center tracking-wide">
@@ -176,20 +195,23 @@ export default function MultiplayerLobbyPage({ onGameStart, onBack }) {
 							placeholder="Room code"
 							value={roomCodeInput}
 							onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-							onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-							maxLength={4}
-							className="w-full bg-transparent border border-white/15 text-white text-2xl placeholder-white/25 px-5 py-3 rounded-full focus:outline-none focus:border-white/35 tracking-[0.4em] transition-colors text-center uppercase"
+							onKeyDown={(e) => e.key === "Enter" && !connecting && handleJoin()}
+							maxLength={10}
+							autoFocus
+							className="w-full bg-transparent border border-white/15 text-white text-xl placeholder-white/25 px-5 py-3 rounded-full focus:outline-none focus:border-white/35 tracking-[0.2em] transition-colors text-center uppercase"
 						/>
 						<button
 							onClick={handleJoin}
-							className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-10 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
+							disabled={connecting}
+							className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-10 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							Join
+							{connecting ? "Connecting..." : "Join"}
 						</button>
 						<button
 							onClick={() => {
 								setStep("mode");
 								setError(null);
+								setConnecting(false);
 							}}
 							className="text-white/25 text-[10px] tracking-widest uppercase hover:text-white/50 transition-colors cursor-pointer"
 						>

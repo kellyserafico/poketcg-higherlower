@@ -2,30 +2,35 @@ import { useState, useEffect, useRef } from "react";
 
 const BATCH_SIZE = 100;
 
-export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onBack }) {
-	const myId = isHost ? "host" : "guest";
-	const me = players.find((p) => p.id === myId);
-	const opponent = players.find((p) => p.id !== myId);
-
+export default function MultiplayerGamePage({ peer, conn, isHost, myName, opponentName, roomCode, onBack }) {
 	const [card1, setCard1] = useState(null);
 	const [card2, setCard2] = useState(null);
 	const [myGuess, setMyGuess] = useState(null);
 	const [opponentGuessed, setOpponentGuessed] = useState(false);
 	const [roundResult, setRoundResult] = useState(null);
-	const [scores, setScores] = useState({ [myId]: 0, [opponent?.id]: 0 });
+	const [myScore, setMyScore] = useState(0);
+	const [opponentScore, setOpponentScore] = useState(0);
 	const [animatedPrice, setAnimatedPrice] = useState(0);
-	const [status, setStatus] = useState("loading"); // loading | playing | revealing | waiting
+	const [status, setStatus] = useState("loading");
 	const [disconnected, setDisconnected] = useState(false);
 
+	// Host-only: tracks guest's guess while waiting for host to also guess
+	const guestGuessRef = useRef(null);
+	// Host-only: tracks host's own guess while waiting for guest
+	const hostGuessRef = useRef(null);
+	// Host-only: scores
+	const myScoreRef = useRef(0);
+	const opponentScoreRef = useRef(0);
+
+	// Card pool — host only
 	const cardPoolRef = useRef([]);
 	const isLoadingPoolRef = useRef(false);
 
-	// Card fetching — only used by host
 	const fetchCardBatch = async () => {
 		try {
 			const page = Math.floor(Math.random() * 100) + 1;
 			const res = await fetch(`https://api.pokemontcg.io/v2/cards?pageSize=${BATCH_SIZE}&page=${page}&q=supertype:pokemon`);
-			if (!res.ok) throw new Error("API error");
+			if (!res.ok) throw new Error();
 			const data = await res.json();
 			return data.data || [];
 		} catch {
@@ -55,7 +60,7 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 		return [pool[i1], pool[i2]];
 	};
 
-	const sendCards = async () => {
+	const sendNewRound = async () => {
 		setStatus("loading");
 		if (cardPoolRef.current.length < 10) await preloadPool();
 		let pair = pickTwo();
@@ -64,11 +69,54 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 			pair = pickTwo();
 		}
 		if (pair) {
-			ws.send(JSON.stringify({ type: "set-cards", card1: pair[0], card2: pair[1] }));
+			guestGuessRef.current = null;
+			hostGuessRef.current = null;
+			conn.send({ type: "new-round", card1: pair[0], card2: pair[1] });
+			// Host also receives new-round locally
+			setCard1(pair[0]);
+			setCard2(pair[1]);
+			setMyGuess(null);
+			setOpponentGuessed(false);
+			setRoundResult(null);
+			setAnimatedPrice(0);
+			setStatus("playing");
 		}
 	};
 
-	// Animate price reveal
+	// Host resolves round when both guesses are in
+	const resolveRound = (hGuess, gGuess, c1, c2) => {
+		const price1 = c1.cardmarket.prices.averageSellPrice;
+		const price2 = c2.cardmarket.prices.averageSellPrice;
+		const hostCorrect = hGuess === "more" ? price2 > price1 : price2 < price1;
+		const guestCorrect = gGuess === "more" ? price2 > price1 : price2 < price1;
+
+		if (hostCorrect) myScoreRef.current += 1;
+		if (guestCorrect) opponentScoreRef.current += 1;
+
+		const result = {
+			type: "round-result",
+			hostGuess: hGuess,
+			guestGuess: gGuess,
+			price1,
+			price2,
+			hostScore: myScoreRef.current,
+			guestScore: opponentScoreRef.current,
+			hostCorrect,
+			guestCorrect,
+		};
+
+		conn.send(result);
+
+		// Apply locally
+		setRoundResult(result);
+		setMyScore(myScoreRef.current);
+		setOpponentScore(opponentScoreRef.current);
+		setStatus("revealing");
+
+		setTimeout(() => sendNewRound(), 3500);
+	};
+
+	// Price animation
 	useEffect(() => {
 		if (!roundResult) {
 			setAnimatedPrice(0);
@@ -78,14 +126,14 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 		const duration = 1000;
 		const start = Date.now();
 		let raf;
-		const animate = () => {
+		const tick = () => {
 			const progress = Math.min((Date.now() - start) / duration, 1);
 			setAnimatedPrice(target * (1 - Math.pow(1 - progress, 3)));
-			if (progress < 1) raf = requestAnimationFrame(animate);
+			if (progress < 1) raf = requestAnimationFrame(tick);
 			else setAnimatedPrice(target);
 		};
 		const t = setTimeout(() => {
-			raf = requestAnimationFrame(animate);
+			raf = requestAnimationFrame(tick);
 		}, 10);
 		return () => {
 			clearTimeout(t);
@@ -93,93 +141,137 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 		};
 	}, [roundResult]);
 
-	// WebSocket message handler
+	// Set up connection handlers + kick off game
 	useEffect(() => {
-		if (isHost) {
-			preloadPool().then(sendCards);
-		}
+		const card1Ref = { current: null };
+		const card2Ref = { current: null };
 
-		ws.onmessage = (event) => {
-			const msg = JSON.parse(event.data);
+		// Keep a ref to the current cards so resolveRound can access them
+		const updateCards = (c1, c2) => {
+			card1Ref.current = c1;
+			card2Ref.current = c2;
+		};
 
-			switch (msg.type) {
+		conn.on("data", (data) => {
+			switch (data.type) {
 				case "new-round":
-					setCard1(msg.card1);
-					setCard2(msg.card2);
-					setMyGuess(null);
-					setOpponentGuessed(false);
-					setRoundResult(null);
-					setAnimatedPrice(0);
-					setStatus("playing");
-					break;
-
-				case "player-guessed":
-					if (msg.playerId !== myId) setOpponentGuessed(true);
-					break;
-
-				case "round-result":
-					setRoundResult(msg);
-					setScores(msg.scores.reduce((acc, s) => ({ ...acc, [s.id]: s.score }), {}));
-					setStatus("revealing");
-					if (isHost) {
-						setTimeout(() => sendCards(), 3500);
+					// Guest receives cards from host
+					if (!isHost) {
+						card1Ref.current = data.card1;
+						card2Ref.current = data.card2;
+						setCard1(data.card1);
+						setCard2(data.card2);
+						setMyGuess(null);
+						setOpponentGuessed(false);
+						setRoundResult(null);
+						setAnimatedPrice(0);
+						setStatus("playing");
 					}
 					break;
 
-				case "player-left":
-					setDisconnected(true);
+				case "opponent-guessed":
+					// The other player has locked in (without knowing what they picked)
+					setOpponentGuessed(true);
+					break;
+
+				case "guess":
+					// Host receives guest's guess
+					if (isHost) {
+						guestGuessRef.current = data.guess;
+						setOpponentGuessed(true);
+						if (hostGuessRef.current !== null) {
+							resolveRound(hostGuessRef.current, guestGuessRef.current, card1Ref.current, card2Ref.current);
+						}
+					}
+					break;
+
+				case "round-result":
+					// Guest receives result from host
+					if (!isHost) {
+						setRoundResult(data);
+						setMyScore(data.guestScore);
+						setOpponentScore(data.hostScore);
+						setStatus("revealing");
+					}
 					break;
 			}
-		};
+		});
 
-		ws.onclose = () => setDisconnected(true);
+		conn.on("close", () => setDisconnected(true));
+		conn.on("error", () => setDisconnected(true));
+
+		// Sync card refs whenever card state updates
+		const origSetCard1 = setCard1;
+		const origSetCard2 = setCard2;
+
+		if (isHost) {
+			preloadPool().then(sendNewRound);
+		}
 
 		return () => {
-			ws.onmessage = null;
-			ws.onclose = null;
+			conn.off("data");
+			conn.off("close");
+			conn.off("error");
 		};
 	}, []);
 
+	// Host needs card refs in resolveRound — sync via a separate effect
+	const card1Ref = useRef(null);
+	const card2Ref = useRef(null);
+	useEffect(() => {
+		card1Ref.current = card1;
+	}, [card1]);
+	useEffect(() => {
+		card2Ref.current = card2;
+	}, [card2]);
+
 	const handleGuess = (guess) => {
-		if (myGuess || status !== "playing" || !card1 || !card2) return;
+		if (myGuess || status !== "playing") return;
 		setMyGuess(guess);
-		ws.send(JSON.stringify({ type: "guess", guess }));
+
+		if (isHost) {
+			hostGuessRef.current = guess;
+			conn.send({ type: "opponent-guessed" }); // tell guest that host has guessed
+			if (guestGuessRef.current !== null) {
+				resolveRound(guess, guestGuessRef.current, card1Ref.current, card2Ref.current);
+			}
+		} else {
+			conn.send({ type: "guess", guess });
+		}
 	};
 
-	const myResult = roundResult?.guesses?.find((g) => g.id === myId);
-	const opponentResult = roundResult?.guesses?.find((g) => g.id !== myId);
-	const price1 = roundResult?.price1 ?? card1?.cardmarket?.prices?.averageSellPrice ?? 0;
-
-	const isCorrectGuess = (guess) => {
-		if (!roundResult) return null;
-		return guess === "more" ? roundResult.price2 > roundResult.price1 : roundResult.price2 < roundResult.price1;
-	};
+	const myResult = roundResult ? (isHost ? roundResult.hostCorrect : roundResult.guestCorrect) : null;
+	const opponentResult = roundResult ? (isHost ? roundResult.guestCorrect : roundResult.hostCorrect) : null;
+	const myGuessInResult = roundResult ? (isHost ? roundResult.hostGuess : roundResult.guestGuess) : null;
+	const opponentGuessInResult = roundResult ? (isHost ? roundResult.guestGuess : roundResult.hostGuess) : null;
 
 	return (
 		<div className="w-screen h-screen bg-black overflow-hidden flex flex-col relative">
 			{/* Top bar */}
 			<div className="flex items-center justify-between px-8 pt-6 pb-4 flex-shrink-0 z-50">
 				<button
-					onClick={onBack}
+					onClick={() => {
+						peer.destroy();
+						onBack();
+					}}
 					className="text-white/30 text-[10px] tracking-widest uppercase hover:text-white/70 transition-colors duration-300 cursor-pointer"
 				>
 					← Leave
 				</button>
 
-				{/* Scores */}
 				<div className="flex items-center gap-8">
 					<div className="text-right">
-						<p className="text-white/40 text-[10px] tracking-widest uppercase">{me?.name}</p>
-						<p className="text-white text-3xl font-light tabular-nums">{scores[myId] ?? 0}</p>
+						<p className="text-white/40 text-[10px] tracking-widest uppercase">{myName}</p>
+						<p className="text-white text-3xl font-light tabular-nums">{myScore}</p>
 					</div>
-					<div className="text-white/15 text-xs tracking-widest">vs</div>
+					<div className="text-white/15 text-xs">vs</div>
 					<div className="text-left">
-						<p className="text-white/40 text-[10px] tracking-widest uppercase">{opponent?.name}</p>
-						<p className="text-white text-3xl font-light tabular-nums">{scores[opponent?.id] ?? 0}</p>
+						<p className="text-white/40 text-[10px] tracking-widest uppercase">{opponentName}</p>
+						<p className="text-white text-3xl font-light tabular-nums">{opponentScore}</p>
 					</div>
 				</div>
 
-				<p className="text-white/20 text-[10px] tracking-widest uppercase font-mono">{roomCode}</p>
+				<p className="text-white/20 text-[10px] tracking-widest font-mono">{roomCode}</p>
 			</div>
 
 			{/* Disconnected overlay */}
@@ -187,7 +279,10 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 				<div className="absolute inset-0 bg-black/80 z-50 flex flex-col items-center justify-center gap-4">
 					<p className="text-white/60 text-sm tracking-wide">Opponent disconnected</p>
 					<button
-						onClick={onBack}
+						onClick={() => {
+							peer.destroy();
+							onBack();
+						}}
 						className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-8 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
 					>
 						Back to Home
@@ -195,7 +290,7 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 				</div>
 			)}
 
-			{/* Loading state */}
+			{/* Loading */}
 			{status === "loading" && (
 				<div className="flex-1 flex items-center justify-center">
 					<p className="text-white/25 text-[10px] tracking-widest uppercase animate-pulse">
@@ -204,10 +299,10 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 				</div>
 			)}
 
-			{/* Game area */}
+			{/* Game */}
 			{(status === "playing" || status === "revealing") && card1 && card2 && (
 				<div className="flex-1 flex items-center justify-center relative">
-					{/* VS Badge */}
+					{/* VS badge */}
 					<div
 						className="absolute z-30 rounded-full w-12 h-12 flex items-center justify-center overflow-hidden shadow-2xl"
 						style={{ marginTop: "-8rem" }}
@@ -224,7 +319,9 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 								<p className="text-white/30 text-[10px] tracking-widest uppercase">{card1.set?.name}</p>
 								<p className="text-white text-lg font-light mt-1">{card1.name}</p>
 								<p className="text-white/25 text-[10px] tracking-widest uppercase mt-4">avg. sell price</p>
-								<p className="text-white text-xl font-light mt-1">${price1.toFixed(2)}</p>
+								<p className="text-white text-xl font-light mt-1">
+									${(roundResult?.price1 ?? card1.cardmarket?.prices?.averageSellPrice ?? 0).toFixed(2)}
+								</p>
 							</div>
 						</div>
 
@@ -239,25 +336,23 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 									<>
 										<p className="text-white/25 text-[10px] tracking-widest uppercase mt-4">avg. sell price</p>
 										<p className="text-white text-xl font-light mt-1">${animatedPrice.toFixed(2)}</p>
-
-										{/* Show both guesses */}
-										<div className="flex gap-6 mt-5">
-											{roundResult?.guesses?.map((g) => {
-												const correct = isCorrectGuess(g.guess);
-												return (
-													<div key={g.id} className="flex flex-col items-center gap-1">
-														<p className="text-white/30 text-[10px] tracking-widest uppercase">{g.name}</p>
-														<p className={`text-sm font-light tracking-wide ${correct ? "text-emerald-400" : "text-red-400/70"}`}>
-															{g.guess} {correct ? "✓" : "✗"}
-														</p>
-													</div>
-												);
-											})}
+										<div className="flex gap-8 mt-5">
+											<div className="flex flex-col items-center gap-1">
+												<p className="text-white/30 text-[10px] tracking-widest uppercase">{myName}</p>
+												<p className={`text-sm font-light ${myResult ? "text-emerald-400" : "text-red-400/70"}`}>
+													{myGuessInResult} {myResult ? "✓" : "✗"}
+												</p>
+											</div>
+											<div className="flex flex-col items-center gap-1">
+												<p className="text-white/30 text-[10px] tracking-widest uppercase">{opponentName}</p>
+												<p className={`text-sm font-light ${opponentResult ? "text-emerald-400" : "text-red-400/70"}`}>
+													{opponentGuessInResult} {opponentResult ? "✓" : "✗"}
+												</p>
+											</div>
 										</div>
 									</>
 								) : (
 									<>
-										{/* Guess buttons */}
 										<div className="flex flex-col items-center gap-2 mt-5">
 											<button
 												disabled={!!myGuess}
@@ -266,7 +361,7 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 													myGuess === "more"
 														? "border-white/60 bg-white text-black cursor-default"
 														: "border-white/25 text-white/70 hover:bg-white hover:text-black cursor-pointer"
-												} disabled:cursor-default`}
+												}`}
 											>
 												More
 											</button>
@@ -277,20 +372,18 @@ export default function MultiplayerGamePage({ ws, players, isHost, roomCode, onB
 													myGuess === "less"
 														? "border-white/60 bg-white text-black cursor-default"
 														: "border-white/25 text-white/70 hover:bg-white hover:text-black cursor-pointer"
-												} disabled:cursor-default`}
+												}`}
 											>
 												Less
 											</button>
 											<p className="text-white/20 text-[10px] tracking-wider mt-2">than {card1.name}</p>
 										</div>
-
-										{/* Opponent status */}
 										<div className="flex items-center gap-2 mt-5">
 											<div
 												className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${opponentGuessed ? "bg-emerald-400" : "bg-white/20 animate-pulse"}`}
 											/>
 											<p className="text-white/25 text-[10px] tracking-widest uppercase">
-												{opponentGuessed ? `${opponent?.name} locked in` : `${opponent?.name} thinking...`}
+												{opponentGuessed ? `${opponentName} locked in` : `${opponentName} thinking...`}
 											</p>
 										</div>
 									</>
