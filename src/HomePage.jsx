@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function HomePage({ onSelectSet }) {
+export default function HomePage({ onSelectSet, onMultiplayer }) {
 	const [sets, setSets] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
@@ -28,12 +28,20 @@ export default function HomePage({ onSelectSet }) {
 				<p className="text-white/30 text-[10px] tracking-widest uppercase mb-4">Pokémon TCG</p>
 				<h1 className="text-5xl font-light tracking-wide">Higher or Lower</h1>
 				<p className="text-white/25 text-xs tracking-wide mt-4">Choose a set, or play with all cards</p>
-				<button
-					className="mt-8 border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-10 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
-					onClick={() => onSelectSet(null)}
-				>
-					Play All Sets
-				</button>
+				<div className="flex items-center justify-center gap-4 mt-8">
+					<button
+						className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-10 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
+						onClick={() => onSelectSet(null)}
+					>
+						Play All Sets
+					</button>
+					<button
+						className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-10 py-3 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
+						onClick={onMultiplayer}
+					>
+						Multiplayer
+					</button>
+				</div>
 			</div>
 
 			{/* Search */}
