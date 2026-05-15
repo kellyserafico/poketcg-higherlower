@@ -6,7 +6,10 @@ import MultiplayerGamePage from "./MultiplayerGamePage";
 import "./App.css";
 
 function App() {
-	const [page, setPage] = useState("home");
+	const [page, setPage] = useState(() => {
+		const params = new URLSearchParams(window.location.search);
+		return params.get("room") ? "multiplayer-lobby" : "home";
+	});
 	const [selectedSet, setSelectedSet] = useState(null);
 	const [multiplayerSession, setMultiplayerSession] = useState(null);
 
@@ -27,22 +30,13 @@ function App() {
 		setMultiplayerSession(null);
 		setPage("home");
 		setSelectedSet(null);
+		window.history.pushState({}, "", "/");
 	};
 
 	if (page === "game") return <GamePage selectedSet={selectedSet} onBack={handleBack} />;
 	if (page === "multiplayer-lobby") return <MultiplayerLobbyPage onGameStart={handleMultiplayerStart} onBack={handleBack} />;
 	if (page === "multiplayer-game" && multiplayerSession) {
-		return (
-			<MultiplayerGamePage
-				peer={multiplayerSession.peer}
-				conn={multiplayerSession.conn}
-				isHost={multiplayerSession.isHost}
-				myName={multiplayerSession.myName}
-				opponentName={multiplayerSession.opponentName}
-				roomCode={multiplayerSession.roomCode}
-				onBack={handleBack}
-			/>
-		);
+		return <MultiplayerGamePage {...multiplayerSession} onBack={handleBack} />;
 	}
 
 	return <HomePage onSelectSet={handleSelectSet} onMultiplayer={() => setPage("multiplayer-lobby")} />;

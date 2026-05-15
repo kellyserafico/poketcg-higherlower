@@ -230,13 +230,13 @@ export default function GamePage({ selectedSet, onBack }) {
 	const GuessButtons = ({ compareTo }) => (
 		<div className="flex flex-col items-center gap-2 mt-5">
 			<button
-				className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer w-36"
+				className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-amber-300 hover:text-gray-900 hover:border-amber-300 transition-all duration-300 cursor-pointer w-36"
 				onClick={() => handleGuess("more")}
 			>
 				More
 			</button>
 			<button
-				className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer w-36"
+				className="border border-white/25 text-white/70 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-amber-300 hover:text-gray-900 hover:border-amber-300 transition-all duration-300 cursor-pointer w-36"
 				onClick={() => handleGuess("less")}
 			>
 				Less
@@ -246,7 +246,7 @@ export default function GamePage({ selectedSet, onBack }) {
 	);
 
 	return (
-		<div className="w-screen h-screen bg-black overflow-hidden flex flex-col items-center justify-center relative">
+		<div className="w-screen h-screen bg-[#0c0c18] overflow-hidden flex flex-col items-center justify-center relative">
 			{/* Back button */}
 			<button
 				onClick={onBack}
@@ -264,26 +264,34 @@ export default function GamePage({ selectedSet, onBack }) {
 
 			{/* Score */}
 			<div className="fixed top-6 right-8 z-50 text-right pointer-events-none select-none">
-				<div className="text-white text-4xl font-light tabular-nums">{score}</div>
+				<div className="text-amber-300 text-4xl font-light tabular-nums">{score}</div>
 				<div className="text-white/25 text-[10px] tracking-widest uppercase mt-1">best {highScore}</div>
 			</div>
 
-			{/* VS Badge */}
+			{/* VS Badge — Pokeball */}
 			{card1 && card2 && (
 				<div
-					className="absolute z-30 rounded-full w-12 h-12 flex items-center justify-center overflow-hidden shadow-2xl"
-					style={{ marginTop: "-8rem" }}
+					className="absolute z-30 rounded-full w-14 h-14 flex items-center justify-center overflow-hidden"
+					style={{ marginTop: "-8rem", boxShadow: "0 0 0 3px #0c0c18, 0 8px 32px rgba(0,0,0,0.6)" }}
 				>
-					<div className="absolute inset-0 bg-white rounded-full z-0" />
+					{/* Pokeball halves */}
+					<div className="absolute top-0 left-0 right-0 h-1/2 bg-red-500 z-0" />
+					<div className="absolute bottom-0 left-0 right-0 h-1/2 bg-white z-0" />
+					{/* Divider */}
+					<div className="absolute top-1/2 left-0 right-0 h-[3px] bg-[#0c0c18] z-[1] -translate-y-1/2" />
+					{/* Center button */}
+					<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[3px] border-[#0c0c18] bg-white z-[2]" />
+					{/* Green fill on correct */}
 					{result && result.isCorrect && (
 						<div
-							className="absolute inset-0 bg-emerald-400 z-[1] rounded-full"
+							className="absolute inset-0 bg-emerald-400 z-[3] rounded-full"
 							style={{ clipPath: `inset(${100 - vsFillProgress * 100}% 0 0 0)` }}
 						/>
 					)}
+					{/* VS text */}
 					{!(result && result.isCorrect && vsFillProgress >= 1) && (
 						<span
-							className="relative z-[2] text-black font-medium text-[10px] tracking-widest uppercase"
+							className="relative z-[4] text-gray-900 font-bold text-[10px] tracking-widest uppercase"
 							style={{
 								opacity:
 									result && result.isCorrect && vsFillProgress >= 0.15 ? Math.max(0, 1 - (vsFillProgress - 0.15) / 0.85) : 1,
@@ -293,18 +301,19 @@ export default function GamePage({ selectedSet, onBack }) {
 							vs
 						</span>
 					)}
+					{/* Checkmark */}
 					{result && result.isCorrect && (
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							width="18"
-							height="18"
+							width="20"
+							height="20"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="white"
 							strokeWidth="2.5"
 							strokeLinecap="round"
 							strokeLinejoin="round"
-							className="absolute inset-0 m-auto z-[2] transition-opacity duration-500"
+							className="absolute inset-0 m-auto z-[5] transition-opacity duration-500"
 							style={{ opacity: vsFillProgress >= 1 ? 1 : 0, pointerEvents: "none" }}
 						>
 							<path d="M20 6 9 17l-5-5" />
@@ -322,7 +331,7 @@ export default function GamePage({ selectedSet, onBack }) {
 							<img className="w-full h-auto rounded-xl shadow-2xl" src={card1.images.large} alt={card1.name} />
 							<CardInfo card={card1}>
 								<p className="text-white/25 text-[10px] tracking-widest uppercase mt-4">avg. sell price</p>
-								<p className="text-white text-xl font-light mt-1">
+								<p className="text-amber-300 text-xl font-light mt-1">
 									${(card1.cardmarket?.prices?.averageSellPrice || 0).toFixed(2)}
 								</p>
 							</CardInfo>
@@ -348,10 +357,10 @@ export default function GamePage({ selectedSet, onBack }) {
 								(result ? (
 									<CardInfo card={card2}>
 										<p className="text-white/25 text-[10px] tracking-widest uppercase mt-4">avg. sell price</p>
-										<p className="text-white text-xl font-light mt-1">${animatedPrice.toFixed(2)}</p>
+										<p className="text-amber-300 text-xl font-light mt-1">${animatedPrice.toFixed(2)}</p>
 										{!result.isCorrect && (
 											<button
-												className="mt-6 border border-white/25 text-white/60 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-white hover:text-black transition-all duration-300 cursor-pointer"
+												className="mt-6 border border-white/25 text-white/60 text-[10px] tracking-widest uppercase px-8 py-2.5 rounded-full hover:bg-amber-300 hover:text-gray-900 hover:border-amber-300 transition-all duration-300 cursor-pointer"
 												onClick={() => {
 													setScore(0);
 													getRandomCards();
